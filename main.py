@@ -55,39 +55,24 @@ class targetFile(File):
 
     """
 
-    def __init__(self, directory, new=False):
-        super().__init__(directory)
+    def __init__(self, filename):
+        self.dir = os.scandir("C:/DSSAT47/Cassava")
 
-        self.filename = self.dir.split("/")[-1]
-        self.dir = os.scandir("".join([d + "/" for d in self.dir.split("/")[:-1]]))
+        try:
+            next(file.name for file in self.dir if file.name == filename)
+            self.filename = filename
+        except:
+            self.filename = self._check_filename(filename)
 
-        if not new:
-            self._check_file_exist()
-        else:
-            self._create_file()
+    def _check_filename(self, filename):
 
-        # self._read_file()
-
-    def _check_file_exist(self):
-        if next(file.name for file in self.dir if file.name == self.filename):
-
-        else:
-            raise ValueError("File do not exist")
-
-    def _create_file(self):
-        filename = self.dir.split("/")[-1]
-        file_dir = "".join([d + "/" for d in self.dir.split("/")[:-1]])
-
-        if os.path.exists(file_dir):
-            if re.search("(CST)$", filename.split(".")[1]):
-                if len(filename.split(".")[0]) == 8:
-                    return filename
-                else:
-                    raise ValueError("file name must have 8 characters")
+        if re.search("(CST)$", filename.split(".")[1]):
+            if len(filename.split(".")[0]) == 8:
+                return filename
             else:
-                raise ValueError("file extension must be '.CST'")
+                raise ValueError("file name must have 8 characters")
         else:
-            raise ValueError("Directory do not exist")
+            raise ValueError("file extension must be '.CST'")
 
     # def _read_file(self):
     #     file = os.scandir(self.dir.split("/")[:-1])
