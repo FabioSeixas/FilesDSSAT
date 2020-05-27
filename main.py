@@ -49,12 +49,6 @@ class sourceFile(File):
 
 class targetFile(File):
 
-    """
-    To create this instance the user must pass the 'directory'.
-    The file (the last element in the directory) can be created ('new' must be set to 'True') or it can exist ('new' equals 'False' as default)
-
-    """
-
     def __init__(self, filename):
         self.dir = os.scandir("C:/DSSAT47/Cassava")
 
