@@ -50,13 +50,19 @@ class sourceFile(File):
 class targetFile(File):
 
     def __init__(self, filename):
-        self.dir = os.scandir("C:/DSSAT47/Cassava")
+        self.dir = os.scandir("C:/DSSAT47/Cassava/")
 
         try:
-            next(file.name for file in self.dir if file.name == filename)
-            self.filename = filename
+            self.file = next(file for file in self.dir if file.name == filename)
+            self.filename = self.file.name
         except:
             self.filename = self._check_filename(filename)
+            self.file = self._create_file()
+
+        self.vars = {}
+        self._read_file(self.file)
+        #print(self.vars)
+        #variables = ['L#SD',  'LAID',  'HWAD',  'LWAD',  'SWAD',  'TWAD']
 
     def _check_filename(self, filename):
 
@@ -68,8 +74,44 @@ class targetFile(File):
         else:
             raise ValueError("file extension must be '.CST'")
 
-    # def _read_file(self):
-    #     file = os.scandir(self.dir.split("/")[:-1])
-    #     print(file)
-    #     with open(file.path) as f:
-    #         print(f)
+    def _create_file(self):
+        raise NotImplementedError
+
+    def _read_file(self, file):
+
+        with open(file.path) as f:
+            for i, l in enumerate(f.readlines()):
+
+                if l[0] == '!':  # skip comments
+                    continue
+
+                if l[0] == '@':  # start of section
+
+                    self._read_header(l[1:])
+                    continue
+
+                if self.vars:
+                    if l.strip() == "":
+                        continue
+
+                    self._read_values(l)
+
+
+    def _read_header(self, line):
+        new_vars = {var: self._get_specs(var, line) for var in line.split()
+                          if var not in self.vars}
+
+        self.vars.update(new_vars)
+
+    def _get_specs(self, var, line):
+        start = re.search(var, line).start()
+        end = re.search(var, line).end()
+
+        if var == "TRNO":
+            return (start, end + 1)
+        else:
+            return (start - 1, end)
+
+    #def _read_values(self, line):
+    #    for k, v in self.vars.items():
+
