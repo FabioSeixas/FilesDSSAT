@@ -68,52 +68,70 @@ class sourceFile(File):
 
         return [i + (v, ) for i, v in zip(index, values)]
 
-
-    def get_var(self, var, cultivar, trat):
-        avg = self.data.loc[(self.data["VARIEDADE"] == cultivar) &
-                            (self.data["TRATAMENTO"] == trat)].groupby(["DATA DA AVALIAÇÃO", "DAP"]).mean()
-
-        var_index = next(index[0] for index in enumerate(avg)
-                         if var == index[1])
-
-        return avg.iloc[:, var_index]
-
     def process_vars(self, cultivar):
+        self.values = {i: {var: self.get_var_values(var, cultivar, trat)
+                          for var in self.choosed_vars}
+                      for i, trat in enumerate(self.trats, start = 1)}
 
-        self.values = {}
+    def write_file(self, target):
 
-        for trat in self.trats:
-            new_values = {var: self.get_var_values(var, cultivar, trat) for var
-                              in self.choosed_vars}
-            self.values.update(new_values)
-
-    def write_file(self, target, n_trat):
+        trat_sizes = self._size_table()
 
         with open(f"C:/DSSAT47/Cassava/{target.filename}", mode = "w") as f:
             f.write("*EXP. DATA (T): \n \n")
 
-            self.write_header(f, target)
-
+            self._write_header(f, target)
             f.write("\n")
 
-            self.write_table(f, target)
+            for i, trat in enumerate(self.trats, start = 1):
+                self._write_table(f, target, i, trat_sizes[i - 1])
 
-    def write_header(self, file, target):
+    def _write_header(self, file, target):
         file.write("@TRNO ")
         for n in target.variables:
-            file.write(self.handle_header_spaces(n))
+            file.write(self._handle_header_spaces(n))
 
-    def handle_header_spaces(self, var):
+    def _handle_header_spaces(self, var):
         while len(var) < 6:
             var = " " + var
         return var
 
+    def _write_table(self, file, target, trat, size):
 
-    def write_table(self, file, target):
-        for i, trat in enumerate(self.trats, start = 1):
+        for l in range(size):
             file.write("     ")
-            file.write(i)
+            file.write(f'{trat}')
+            values = self.get_line_values(trat, l)
+            for var_value in values:
 
+                try:
+                    if var_value[0] == date:
+                        if var_value[1] == dap:
+                            pass
+                        else:
+                            raise ValueError("valores de dap entre variaveis não correspondem")
+                    else:
+                        raise ValueError("valores de date entre variaveis não correspondem")
+                except:
+                    date, dap, val = [*var_value]
+                    file.write(self._handle_header_spaces(str(date)))
+                    file.write(self._handle_header_spaces(str(dap)))
+
+                date, dap, val = [*var_value]
+                file.write(self._handle_header_spaces(str(val)))
+
+            file.write("\n")
+
+
+    def _size_table(self):
+        size = []
+        for values in self.values.values():
+            lengths = [len(v) for v in values.values()]
+            size.append(max(lengths))
+        return size
+
+    def get_line_values(self, trat, line):
+        return [v[line] for v in self.values[trat].values()]
 
 
 
