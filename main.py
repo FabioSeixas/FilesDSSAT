@@ -3,6 +3,7 @@ import re
 import time
 
 import pandas as pd
+import numpy as np
 from datetime import datetime
 
 
@@ -41,17 +42,33 @@ class sourceFile(File):
         return [var for var in self.data.columns]
 
     def _round_numbers(self, values, var):
-        if max(values) > 10:
+
+        values = np.nan_to_num(values, nan = -99)
+
+        if values.max() > 10:
             return [int(value) for value in values]
-        elif max(values) < 10 and var == "GSTD":
+
+        elif values.max() < 10 and var == "GSTD":
             return [int(value) for value in values]
+
         else:
-            return [round(value, 2) for value in values]
+            values = [round(value, 2) for value in values]
+            return [self._handle_float(value) for value in values]
+
+    def _handle_float(self, val):
+        while len(str(val)) < 4:
+            val = str(val) + "0"
+        return str(val)
 
     def choose_variables(self, var_list, cultivar):
         self.choosed_vars = [var for var in var_list if var in self.vars]
 
         self.process_vars(cultivar)
+
+    def process_vars(self, cultivar):
+        self.values = {i: {var: self.get_var_values(var, cultivar, trat)
+                          for var in self.choosed_vars}
+                      for i, trat in enumerate(self.trats, start = 1)}
 
     def get_var_values(self, var, cultivar, trat):
         avg = self.data.loc[(self.data["VARIEDADE"] == cultivar) &
@@ -63,15 +80,10 @@ class sourceFile(File):
         return self.process_values(avg.iloc[:, var_index], var)
 
     def process_values(self, serie, var):
-        values = self._round_numbers(serie.values, var)
+        values = self._round_numbers(serie.to_numpy(), var)
         index = [(i.date().strftime("%y%j"), dap) for i, dap in serie.index]
-
+        print(values)
         return [i + (v, ) for i, v in zip(index, values)]
-
-    def process_vars(self, cultivar):
-        self.values = {i: {var: self.get_var_values(var, cultivar, trat)
-                          for var in self.choosed_vars}
-                      for i, trat in enumerate(self.trats, start = 1)}
 
     def write_file(self, target):
 
@@ -92,12 +104,13 @@ class sourceFile(File):
             file.write(self._handle_header_spaces(n))
 
     def _handle_header_spaces(self, var):
-        while len(var) < 6:
+
+        while len(var) < 6:    # Space between two variables
             var = " " + var
         return var
 
     def _write_table(self, file, target, trat, size):
-        print(self.values)
+
         for l in range(size):
             file.write("     ")
             file.write(f'{trat}')
