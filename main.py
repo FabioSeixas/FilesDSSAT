@@ -47,7 +47,7 @@ class sourceFile(File):
         if values.max() > 10:
             if var.split()[0] == "MASSA":
                 values = [self._convert_value(value) for value in values]
-            print(var, values)
+
             return [int(value) for value in values]
 
         elif values.max() < 10 and var == "GSTD":
