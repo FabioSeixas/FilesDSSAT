@@ -82,7 +82,7 @@ class sourceFile(File):
     def process_values(self, serie, var):
         values = self._round_numbers(serie.to_numpy(), var)
         index = [(i.date().strftime("%y%j"), dap) for i, dap in serie.index]
-        print(values)
+
         return [i + (v, ) for i, v in zip(index, values)]
 
     def write_file(self, target):
