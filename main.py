@@ -4,7 +4,6 @@ import time
 
 import pandas as pd
 import numpy as np
-from datetime import datetime
 
 
 
@@ -46,6 +45,9 @@ class sourceFile(File):
         values = np.nan_to_num(values, nan = -99)
 
         if values.max() > 10:
+            if var.split()[0] == "MASSA":
+                values = [self._convert_value(value) for value in values]
+            print(var, values)
             return [int(value) for value in values]
 
         elif values.max() < 10 and var == "GSTD":
@@ -54,6 +56,14 @@ class sourceFile(File):
         else:
             values = [round(value, 2) for value in values]
             return [self._handle_float(value) for value in values]
+
+    def _convert_value(self, value):
+        if value == -99:
+            return value
+        else:
+            # 10000 cm2 = 1 ha ; 0.72 cm2 = one plant area
+            # '/1000' to convert from cm to kg
+            return (value * (10000 /0.72)) / 1000
 
     def _handle_float(self, val):
         while len(str(val)) < 4:
@@ -109,14 +119,14 @@ class sourceFile(File):
                             for var_code, var_name
                             in zip(target.variables[2:], self.choosed_vars)]) # '[2:]' to avoid 'DATE' and 'DAP'
 
-        return f'! Treatments \n{trat_text}!\n ! Variables \n{vars_text} \n'
+        return f'! Treatments \n{trat_text}!\n! Variables \n{vars_text} \n'
 
     def _write_header(self, file, target):
         file.write("@TRNO ")
         for n in target.variables:
-            file.write(self._handle_header_spaces(n))
+            file.write(self._handle_var_spaces(n))
 
-    def _handle_header_spaces(self, var):
+    def _handle_var_spaces(self, var):
 
         while len(var) < 6:    # Space between two variables
             var = " " + var
@@ -136,11 +146,11 @@ class sourceFile(File):
                             pass
                 except:
                     date, dap, val = [*var_value]
-                    file.write(self._handle_header_spaces(str(date)))
-                    file.write(self._handle_header_spaces(str(dap)))
+                    file.write(self._handle_var_spaces(str(date)))
+                    file.write(self._handle_var_spaces(str(dap)))
 
                 date, dap, val = [*var_value]
-                file.write(self._handle_header_spaces(str(val)))
+                file.write(self._handle_var_spaces(str(val)))
 
             del date, dap, val
             file.write("\n")
