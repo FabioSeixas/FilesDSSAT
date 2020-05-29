@@ -97,7 +97,7 @@ class sourceFile(File):
         return var
 
     def _write_table(self, file, target, trat, size):
-
+        print(self.values)
         for l in range(size):
             file.write("     ")
             file.write(f'{trat}')
