@@ -90,13 +90,26 @@ class sourceFile(File):
         trat_sizes = self._size_table()
 
         with open(f"C:/DSSAT47/Cassava/{target.filename}", mode = "w") as f:
-            f.write("*EXP. DATA (T): \n \n")
+
+            f.write("*EXP. DATA (T): \n \n") # File header
+            f.write(self._write_description(target)) # Comments (File Description)
 
             self._write_header(f, target)
             f.write("\n")
 
             for i, trat in enumerate(self.trats, start = 1):
-                self._write_table(f, target, i, trat_sizes[i - 1])
+                self._write_table(f, i, trat_sizes[i - 1])
+
+    def _write_description(self, target):
+        trat_text = "".join([f'! {trat_n} = {treatment} \n'
+                            for trat_n, treatment
+                            in zip(self.values.keys(), self.trats)])
+
+        vars_text = "".join([f'! {var_code} = {var_name} \n'
+                            for var_code, var_name
+                            in zip(target.variables[2:], self.choosed_vars)]) # '[2:]' to avoid 'DATE' and 'DAP'
+
+        return f'! Treatments \n{trat_text}!\n ! Variables \n{vars_text} \n'
 
     def _write_header(self, file, target):
         file.write("@TRNO ")
@@ -109,22 +122,18 @@ class sourceFile(File):
             var = " " + var
         return var
 
-    def _write_table(self, file, target, trat, size):
+    def _write_table(self, file, trat, size):
 
         for l in range(size):
             file.write("     ")
             file.write(f'{trat}')
-            values = self.get_line_values(trat, l)
+            values = [v[l] for v in self.values[trat].values()]
             for var_value in values:
 
                 try:
                     if var_value[0] == date:
                         if var_value[1] == dap:
                             pass
-                        else:
-                            raise ValueError("valores de dap entre variaveis não correspondem")
-                    else:
-                        raise ValueError("valores de date entre variaveis não correspondem")
                 except:
                     date, dap, val = [*var_value]
                     file.write(self._handle_header_spaces(str(date)))
@@ -133,6 +142,7 @@ class sourceFile(File):
                 date, dap, val = [*var_value]
                 file.write(self._handle_header_spaces(str(val)))
 
+            del date, dap, val
             file.write("\n")
 
 
@@ -142,9 +152,6 @@ class sourceFile(File):
             lengths = [len(v) for v in values.values()]
             size.append(max(lengths))
         return size
-
-    def get_line_values(self, trat, line):
-        return [v[line] for v in self.values[trat].values()]
 
 
 
