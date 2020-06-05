@@ -47,7 +47,6 @@ class sourceFile(File):
         if values.max() > 10:
             if var.split()[0] == "MASSA":
                 values = [self._convert_value(value) for value in values]
-
             return [int(value) for value in values]
 
         elif values.max() < 10 and var == "GSTD":
@@ -63,7 +62,7 @@ class sourceFile(File):
         else:
             # 10000 cm2 = 1 ha ; 0.72 cm2 = one plant area
             # '/1000' to convert from cm to kg
-            return (value * (10000 /0.72)) / 1000
+            return (value * (10000 / 0.72)) / 1000
 
     def _handle_float(self, val):
         while len(str(val)) < 4:
@@ -164,9 +163,6 @@ class sourceFile(File):
         return size
 
 
-
-
-
 class targetFile(File):
 
     def __init__(self, filename):
@@ -202,10 +198,13 @@ class targetFile(File):
 
         return next(file for file in self.dir if file.name == self.filename)
 
-    def _read_file(self, file):
+    def read_file(self):
 
-        self.vars = {}
-        with open(file.path) as f:
+        self.df = pd.DataFrame(columns = ["TRNO", "DATE"])  # for final data
+        self.vars = {}                                      # for var specs (line space)
+        self.vals = {}                                      # for var values
+
+        with open(self.file.path) as f:
             for i, l in enumerate(f.readlines()):
 
                 if l[0] == '!':  # skip comments
@@ -218,16 +217,32 @@ class targetFile(File):
 
                 if self.vars:
                     if l.strip() == "":
+                        self.vars = {}
+                        self.df = self._insert_data_df()
+                        self.vals = {}
                         continue
 
                     self._read_values(l)
 
+        self.df = self._insert_data_df()
+        return self.df
 
     def _read_header(self, line):
-        new_vars = {var: self._get_specs(var, line) for var in line.split()
-                          if var not in self.vars}
+        self.vars = {var: self._get_specs(var, line) for var in line.split()}
+        self.vals = {key: [] for key in self.vars.keys()}
 
-        self.vars.update(new_vars)
+    def _insert_data_df(self):
+        if not self.vals:
+            return self.df
+        data = (pd.merge(self.df,
+                         right = pd.DataFrame(self.vals),
+                         how = "outer",
+                         on = ["TRNO", "DATE"])
+                  .sort_values(by = ["TRNO", "DATE"])
+                  .replace("-99", "")
+                  .replace(",", ".")
+               )
+        return data[data.TRNO != "\x1a"]
 
     def _get_specs(self, var, line):
         start = re.search(var, line).start()
@@ -239,7 +254,9 @@ class targetFile(File):
             return (start - 1, end)
 
     def _read_values(self, line):
-        raise NotImplementedError
+        for k, v in self.vars.items():
+            value = line[v[0]:(v[1] + 1)].strip()
+            self.vals[k].append(value)
 
     def set_variables(self, var_list):
         self.variables.extend([var for var in var_list
